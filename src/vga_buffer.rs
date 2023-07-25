@@ -13,6 +13,9 @@ const BUFFER_WIDTH: usize = 80;
 // Use volatile library to wrap certain types so they don't get optimized by the compiler
 use volatile::Volatile;
 
+// Implement rusts formatting macros to use write! macro for our vga buffer
+use core::fmt;
+
 // Represent different colors as an enum --> each enum variant stored as a u8
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,6 +83,13 @@ pub struct Writer {
     buffer: &'static mut Buffer,
 }
 
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_string(s);
+        Ok(())
+    }
+}
+
 // To write to the buffer we will always be on the last row and add characters until the row is full or we encounter a newline character
 // then we create a newline and continue the process
 impl Writer {
@@ -113,7 +123,28 @@ impl Writer {
         }
     }
 
-    fn new_line(&mut self) {}
+    fn new_line(&mut self) {
+        // shift every character in a line to the line above (the top-most line gets deleted instead)
+        for row in 1..BUFFER_HEIGHT {
+            for col in 0..BUFFER_WIDTH {
+                let character = self.buffer.chars[row][col].read();
+                self.buffer.chars[row - 1][col].write(character);
+            }
+        }
+        self.clear_row(BUFFER_HEIGHT - 1);
+        self.column_position = 0;
+    }
+
+    // clears the row by writing a blank character to every cell in the row
+    fn clear_row(&mut self, row: usize) {
+        let blank = ScreenChar {
+            ascii_character: b' ',
+            color_code: self.color_code,
+        };
+        for col in 0..BUFFER_WIDTH {
+            self.buffer.chars[row][col].write(blank);
+        }
+    }
 }
 
 // The buffer code may seem unusual but it is simple,
@@ -122,6 +153,7 @@ impl Writer {
 // This ensures that we use rust references rather than manipulating raw pointers which would result in unsafe blocks being in the writer implementation instead
 // Rather we use a one-time unsafe block to access a specific location in memory
 pub fn write_something() {
+    use core::fmt::Write;
     let mut writer = Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
@@ -131,6 +163,7 @@ pub fn write_something() {
     writer.write_byte(b'H');
     writer.write_string("ello ");
     writer.write_string("World!");
-    writer.write_string("\n\tHey Again!");
-    writer.write_string("\n\tWhat about a third time!")
+    writer.write_string("\nHey Again!");
+    writer.write_string("\nWhat about a third time!");
+    write!(writer, "\nThe numbers are {} and {}", 42, 1.0/3.0).unwrap();
 }
