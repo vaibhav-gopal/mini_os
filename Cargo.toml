@@ -7,5 +7,9 @@ edition = "2021"
 # bootloaders are responsible for initializing the CPU and loading our custom Kernel
 # versions 0.11.x of the bootloader crate is broken and 0.10.x requires additional research to work
 
+# Use the volatile library which ensures that read or (only or) writes are not optimized by the compiler
+# newer versions are not compatible
+
 [dependencies]
 bootloader = "0.9.22"
+volatile = "0.2.6"

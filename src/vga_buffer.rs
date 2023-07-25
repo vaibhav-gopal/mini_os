@@ -10,6 +10,9 @@
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
 
+// Use volatile library to wrap certain types so they don't get optimized by the compiler
+use volatile::Volatile;
+
 // Represent different colors as an enum --> each enum variant stored as a u8
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,7 +68,7 @@ struct ScreenChar {
 // again we use repr(transparent) to "ensure it has the same memory layout as its single field" --> no extra struct wrappers? (research more)
 #[repr(transparent)]
 struct Buffer {
-    chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 // a writer struct that keeps track of the current position, color codes and a mutable reference to the vga buffer to write to it
@@ -90,10 +93,10 @@ impl Writer {
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
                 let color_code = self.color_code;
-                self.buffer.chars[row][col] = ScreenChar {
+                self.buffer.chars[row][col].write(ScreenChar {
                     ascii_character: byte,
                     color_code,
-                };
+                });
                 self.column_position += 1;
             }
         }
@@ -111,4 +114,23 @@ impl Writer {
     }
 
     fn new_line(&mut self) {}
+}
+
+// The buffer code may seem unusual but it is simple,
+// First we set a mutable raw pointer to a Buffer type to the address 0xb8000 (which is where the VGA buffer lives)
+// Then we dereference it --> giving us a Buffer type in memory and get a mutable reference to it instead
+// This ensures that we use rust references rather than manipulating raw pointers which would result in unsafe blocks being in the writer implementation instead
+// Rather we use a one-time unsafe block to access a specific location in memory
+pub fn write_something() {
+    let mut writer = Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::Yellow, Color::Black),
+        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }
+    };
+
+    writer.write_byte(b'H');
+    writer.write_string("ello ");
+    writer.write_string("World!");
+    writer.write_string("\n\tHey Again!");
+    writer.write_string("\n\tWhat about a third time!")
 }

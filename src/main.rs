@@ -40,5 +40,6 @@ mod vga_buffer;
 // named `_start` by default, (LLVM and LLD/Rust-LLD standards)
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    vga_buffer::write_something();
     loop {}
 }
