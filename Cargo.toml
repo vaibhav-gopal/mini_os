@@ -10,6 +10,13 @@ edition = "2021"
 # Use the volatile library which ensures that read or (only or) writes are not optimized by the compiler
 # newer versions are not compatible
 
+# Use the spin crate to be able to use spinlocks which don't require operating system abstractions compared to mutexes (regular)
+
 [dependencies]
 bootloader = "0.9.22"
 volatile = "0.2.6"
+spin = "0.5.2"
+
+[dependencies.lazy_static]
+version = "1.0"
+features = ["spin_no_std"]

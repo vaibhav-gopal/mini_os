@@ -16,6 +16,18 @@ use volatile::Volatile;
 // Implement rusts formatting macros to use write! macro for our vga buffer
 use core::fmt;
 
+// Use lazy statics to dereference raw pointers in static variables
+use lazy_static::lazy_static;
+
+// Use spinning mutexes (spinlocks) rather than regular mutexes which require blocking support and threads (which we don't have)
+// now why do we need "safe interior mutability" if our kernal won't even have the concept of threads in the first place!!!???
+// Answer --> From the perspective of the compiler an interrupt handler is a thread. The interrupt handler could run in the middle of a write operation,
+//   thus seeing a partial write, a write that never actually happened in the program you wrote (for example because the compiler stored a temporary value there
+//   to save stack space and would write the correct value at a later time) or any other bad thing. Because interrupt handlers are implemented in this kernel,
+//   we have data races. Also data races are not the only issue. It is for example not acceptable to have two mutable references to the same static mut, just like any other data.
+//   static mut however makes it quite easy to cause two mutable references to it at the same time.
+use spin::Mutex;
+
 // Represent different colors as an enum --> each enum variant stored as a u8
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,6 +126,7 @@ impl Writer {
 
     // write the byte in the string if within printable ASCII characters range or if it is a newline character
     // otherwise we print a miscilanious spacer character 0xfe --> '■'
+    // Use the write_str() method instead of this
     pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
             match byte {
@@ -147,23 +160,37 @@ impl Writer {
     }
 }
 
-// The buffer code may seem unusual but it is simple,
+// -> Implement a global static writer, so other modules don't have to carry a spare writer instance
+// problems occur --> we cannot dereference raw pointers in static variables as they are initialized at compile time
+// -> Use the lazy_static crate which gives lazily evaluated static variables which are evaluated at runtime instead
+// -> The buffer code may seem unusual but it is simple,
 // First we set a mutable raw pointer to a Buffer type to the address 0xb8000 (which is where the VGA buffer lives)
 // Then we dereference it --> giving us a Buffer type in memory and get a mutable reference to it instead
 // This ensures that we use rust references rather than manipulating raw pointers which would result in unsafe blocks being in the writer implementation instead
 // Rather we use a one-time unsafe block to access a specific location in memory
-pub fn write_something() {
-    use core::fmt::Write;
-    let mut writer = Writer {
+lazy_static! {
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }
-    };
+        buffer: unsafe { &mut *(0xb8000 as *mut Buffer)}
+    });
+}
 
-    writer.write_byte(b'H');
-    writer.write_string("ello ");
-    writer.write_string("World!");
-    writer.write_string("\nHey Again!");
-    writer.write_string("\nWhat about a third time!");
-    write!(writer, "\nThe numbers are {} and {}", 42, 1.0/3.0).unwrap();
+// Redefine the println!() and print!() macro to our implementation (spinning mutex, and write into the vga buffer)
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
 }

@@ -27,7 +27,8 @@ use core::panic::PanicInfo;
 // Called on panic --> loop infinitely for now --> diverging function returns "never" type
 // FIXME: The duplicate lang item `panic_impl` error is cased by rust_analyzer in vscode --> FIXED, see .vscode/settings.json
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
 
@@ -40,6 +41,8 @@ mod vga_buffer;
 // named `_start` by default, (LLVM and LLD/Rust-LLD standards)
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    vga_buffer::write_something();
+    println!("Hello World!!!!");
+    print!("Hello yet again :(");
+    println!(" --> Some numbers: {} {}", 42, 1.337);
     loop {}
 }
