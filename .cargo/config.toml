@@ -1,0 +1,16 @@
+# Recompile compiler builtins and core library because it comes precompiled only for specific targets, not custom ones
+
+# Also include the mem feature set of compiler builtins which include memory functions like "memcpy, memset and memcmp"
+# Which are typically included by the C library on the host OS, but we need to either implement it outselves or use existing features (which we are doing here)
+
+[unstable]
+build-std = ["core", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]
+
+# Custom target --> for no host OS
+# - Don't unwind for panics (abort instead), use LLD as the linker instead for cross-compatibility
+# - Disable redzone optimization to avoid annoying errors / bugs later on, use x86-64 architecture
+# - Disable SIMD to increase performance, use soft-float (software implementation) for floating point numbers instead of SIMD
+
+[build]
+target = "x86_64-blog_os.json"

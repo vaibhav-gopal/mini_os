@@ -1,19 +1,15 @@
 // MiniOS -> Custom OS by Vaibhav Gopalakrishnan
-// 
+//
 // An OS Kernal in a bare-metal executable
-// 
+//
 // This entire project is based off the "Blog OS" which details the instructions to build your own OS in rust
 // https://os.phil-opp.com
-// 
+//
 // This project code cannot use ANY OS level abstractions (and by extension the Rust Standard Library and C Standard Library):
 // - Threads, Files, Heap Memory, Networks, Random Numbers, Standard Output, + more
-// 
+//
 // We can however use:
 // - Iterators, Closures, Pattern Matching, Option/Result, String formatting and the Ownership/borrowing system
-// 
-// To build this OS without getting linker errors because we are not using an underlying C runtime
-// we use the `thumbv7em-none-eabihf` target triple --> which describes a bare-metal embedded ARM target with no OS
-// use `cargo build --target thumbv7em-none-eabihf` to build
 
 // Disable the Standard Library
 #![no_std]
@@ -36,6 +32,7 @@ fn panic(_info: &PanicInfo) -> ! {
 // Use extern "C" to use the C calling convention instead of the unspecified rust calling convention which uses system defaults
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    loop {
-    }
+    // this function is the entry point, since the linker looks for a function
+    // named `_start` by default, (LLVM and LLD/Rust-LLD standards)
+    loop {}
 }
