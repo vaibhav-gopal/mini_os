@@ -14,3 +14,12 @@ build-std-features = ["compiler-builtins-mem"]
 
 [build]
 target = "x86_64-mini_os.json"
+
+# This `runner` executable does 2 things: uses the cargo `bootimage` crate / command to build the bootimage and link the kernal together
+# It then uses qemu to emulate a x86_64 machine and use the newely created bootimage as the boot drive and runs our OS
+# Same thing can be done by executing these commands:
+# - `cargo bootimage` (which does `cargo build` under the hood)
+# - `qemu-system-x86_64 -drive format=raw,file=target/x86_64-mini_os/debug/bootimage-mini_os.bin`
+
+[target.'cfg(target_os = "none")']
+runner = "bootimage runner"

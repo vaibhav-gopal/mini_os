@@ -10,6 +10,9 @@
 //
 // We can however use:
 // - Iterators, Closures, Pattern Matching, Option/Result, String formatting and the Ownership/borrowing system
+//
+// To run: `cargo run`
+// Uses QEMU to run (emulate) the OS
 
 // Disable the Standard Library
 #![no_std]
@@ -28,11 +31,14 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
+// Use our vga text buffer implementation
+mod vga_buffer;
+
 // We use no_mangle to tell rust not to generate some cryptic symbol for the _start function instead
 // Use extern "C" to use the C calling convention instead of the unspecified rust calling convention which uses system defaults
+// this function is the entry point, since the linker looks for a function
+// named `_start` by default, (LLVM and LLD/Rust-LLD standards)
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default, (LLVM and LLD/Rust-LLD standards)
     loop {}
 }
