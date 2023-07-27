@@ -16,7 +16,18 @@ edition = "2021"
 bootloader = "0.9.22"
 volatile = "0.2.6"
 spin = "0.5.2"
+x86_64 = "0.14.2"
 
 [dependencies.lazy_static]
 version = "1.0"
 features = ["spin_no_std"]
+
+# define a i/o port to acess to quit QEMU when running `cargo test` without having to implement tedious shutdown functions
+# we must use port mapped I/O (in which theres a port number to acess) in contrast to memory mapped I/O like the VGA buffer/device
+# iobase defines the port address where the isa-debug-exit device (which lets us quit QEMU) lives and iosize defines the portsize
+
+# we access port mapped I/O ports using specific CPU instructions called `in` and `out` which take a port number and data byte
+# instead of writing manual assembly code we can use the x86_64 crate for the `in` and `out` functionality we are looking for
+
+[package.metadata.bootimage]
+test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
