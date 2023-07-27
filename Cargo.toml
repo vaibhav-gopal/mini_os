@@ -3,20 +3,23 @@ name = "mini_os"
 version = "0.1.0"
 edition = "2021"
 
+
+[dependencies]
 # Use a premade bootloader (implemented in rust and assembly NOT C code) instead of implementing it outselves
 # bootloaders are responsible for initializing the CPU and loading our custom Kernel
 # versions 0.11.x of the bootloader crate is broken and 0.10.x requires additional research to work
-
+bootloader = "0.9.22"
 # Use the volatile library which ensures that read or (only or) writes are not optimized by the compiler
 # newer versions are not compatible
-
-# Use the spin crate to be able to use spinlocks which don't require operating system abstractions compared to mutexes (regular)
-
-[dependencies]
-bootloader = "0.9.22"
 volatile = "0.2.6"
+# Use the spin crate to be able to use spinlocks which don't require operating system abstractions compared to mutexes (regular)
 spin = "0.5.2"
+# we access port mapped I/O ports using specific CPU instructions called `in` and `out` which take a port number and data byte
+# instead of writing manual assembly code we can use the x86_64 crate for the `in` and `out` functionality we are looking for
 x86_64 = "0.14.2"
+# communicate from QEMU to host system via serial ports and UART on the QEMU system
+# the 16550 UART Integrated Circuit was compatible with most x86 systems --> crate provides UART initialization and types
+uart_16550 = "0.2.19"
 
 [dependencies.lazy_static]
 version = "1.0"
@@ -25,9 +28,6 @@ features = ["spin_no_std"]
 # define a i/o port to acess to quit QEMU when running `cargo test` without having to implement tedious shutdown functions
 # we must use port mapped I/O (in which theres a port number to acess) in contrast to memory mapped I/O like the VGA buffer/device
 # iobase defines the port address where the isa-debug-exit device (which lets us quit QEMU) lives and iosize defines the portsize
-
-# we access port mapped I/O ports using specific CPU instructions called `in` and `out` which take a port number and data byte
-# instead of writing manual assembly code we can use the x86_64 crate for the `in` and `out` functionality we are looking for
-
 [package.metadata.bootimage]
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
+test-success-exit-code = 33         # We defined success as 0x10 which turns into: (0x10 << 1) | 1 = 33 (reason for this setting see test_runner() func in main)

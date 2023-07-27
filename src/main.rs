@@ -39,7 +39,8 @@ fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-//
+// define an enum to represent our possible exit status', see exit_qemu() for more info
+// we also represent the enum variants as u32 because we defined the "port size" as 4 bytes so u32 would equal the max value
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum QemuExitCode {
@@ -47,13 +48,30 @@ pub enum QemuExitCode {
     Failed = 0x11,
 }
 
+pub fn exit_qemu(exit_code: QemuExitCode) {
+    // enable use of special port I/O cpu instructions via rust abstractions
+    use x86_64::instructions::port::Port;
+
+    // passing a value into the isa-debug-exit QEMU port exits with an exit status of: "(value << 1) | 1"
+    // the success and failed exit status codes don't matter as long we don't interefere with QEMU's default exit codes which mean special things
+    // ex. we can't choose success to exit with 0 because that would mean "(0 << 1) | 1 = 1", and exit status 1 means there was an error in running QEMU
+    unsafe {
+        let mut port = Port::new(0xf4);
+        port.write(exit_code as u32);
+    }
+}
+
 // Custom test runner function --> automatically runned by test_main() and inputs all test cases
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {
     println!("Running {} tests", tests.len());
+    // run all tests
     for test in tests {
         test();
     }
+    // exit qemu --> cargo test considers all exit codes other than 0 to be failures, but we literally can't exit with code 0 as discussed above
+    // b/c of qemu restrictions on isa-debug-exit --> workaround bootimage crate lets us remap exit codes, see Cargo.toml
+    exit_qemu(QemuExitCode::Success);
 }
 
 #[test_case]
