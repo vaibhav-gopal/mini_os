@@ -61,10 +61,16 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
     }
 }
 
+// Use our vga text buffer implementation
+mod vga_buffer;
+
+// use serial module to communicate with host system
+mod serial;
+
 // Custom test runner function --> automatically runned by test_main() and inputs all test cases
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {
-    println!("Running {} tests", tests.len());
+    serial_println!("Running {} tests", tests.len());
     // run all tests
     for test in tests {
         test();
@@ -76,13 +82,10 @@ fn test_runner(tests: &[&dyn Fn()]) {
 
 #[test_case]
 fn trivial_assertion() {
-    print!("trivial assertion... ");
+    serial_print!("trivial assertion... ");
     assert_eq!(1, 1);
-    println!("[ok]");
+    serial_println!("[ok]");
 }
-
-// Use our vga text buffer implementation
-mod vga_buffer;
 
 // We use no_mangle to tell rust not to generate some cryptic symbol for the _start function instead
 // Use extern "C" to use the C calling convention instead of the unspecified rust calling convention which uses system defaults

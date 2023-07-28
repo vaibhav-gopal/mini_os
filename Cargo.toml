@@ -29,5 +29,5 @@ features = ["spin_no_std"]
 # we must use port mapped I/O (in which theres a port number to acess) in contrast to memory mapped I/O like the VGA buffer/device
 # iobase defines the port address where the isa-debug-exit device (which lets us quit QEMU) lives and iosize defines the portsize
 [package.metadata.bootimage]
-test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
+test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio"] # redirect the serial port in QEMU to the stdout on the host system
 test-success-exit-code = 33         # We defined success as 0x10 which turns into: (0x10 << 1) | 1 = 33 (reason for this setting see test_runner() func in main)
