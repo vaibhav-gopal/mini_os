@@ -5,6 +5,7 @@ edition = "2021"
 
 
 [dependencies]
+
 # Use a premade bootloader (implemented in rust and assembly NOT C code) instead of implementing it outselves
 # bootloaders are responsible for initializing the CPU and loading our custom Kernel
 # versions 0.11.x of the bootloader crate is broken and 0.10.x requires additional research to work
@@ -25,9 +26,16 @@ uart_16550 = "0.2.19"
 version = "1.0"
 features = ["spin_no_std"]
 
-# define a i/o port to acess to quit QEMU when running `cargo test` without having to implement tedious shutdown functions
+
+[package.metadata.bootimage]
+
 # we must use port mapped I/O (in which theres a port number to acess) in contrast to memory mapped I/O like the VGA buffer/device
 # iobase defines the port address where the isa-debug-exit device (which lets us quit QEMU) lives and iosize defines the portsize
-[package.metadata.bootimage]
-test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio"] # redirect the serial port in QEMU to the stdout on the host system
+test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", # define a i/o port to acess to quit QEMU when running `cargo test` without having to implement tedious shutdown functions
+    "-serial", "stdio", # redirect the serial port in QEMU to the stdout on the host system
+    "-display", "none" # turn off display since we are using serial to communcate test results anyways
+]
+
 test-success-exit-code = 33         # We defined success as 0x10 which turns into: (0x10 << 1) | 1 = 33 (reason for this setting see test_runner() func in main)
+
+test-timeout = 300          # (in seconds) --> automatically mark a test as timed out when running `cargo test` after this amount of time via endless loops, endless reboots, unhandled CPU exceptions etc...
