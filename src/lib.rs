@@ -1,0 +1,95 @@
+#![no_std]
+#![cfg_attr(test, no_main)] //conditionally add the no_main attribute when lib.rs is tested
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+
+pub mod serial;
+pub mod vga_buffer;
+
+use core::panic::PanicInfo;
+
+// CONFIG TEST FUNCS (for main.rs, lib.rs and all integration tests)===============================
+pub trait Testable {
+    fn run(&self) -> ();
+}
+
+// implement testable trait for all functions which implement Fn() which prints test messages to the host system via serial ports
+// therefore no need to manually print serial messages in each test case code
+impl<T> Testable for T
+where 
+    T: Fn(),
+{
+    fn run(&self) -> () {
+        serial_print!("{}...\t", core::any::type_name::<T>());
+        self();
+        serial_println!("[ok]");
+    }
+}
+
+// Custom test runner function --> automatically runned by test_main() and inputs all test cases
+pub fn test_runner(tests: &[&dyn Testable]) {
+    serial_println!("Running {} tests", tests.len());
+    // run all tests
+    for test in tests {
+        test.run();
+    }
+    // exit qemu --> cargo test considers all exit codes other than 0 to be failures, but we literally can't exit with code 0 as discussed above
+    // b/c of qemu restrictions on isa-debug-exit --> workaround bootimage crate lets us remap exit codes, see Cargo.toml
+    exit_qemu(QemuExitCode::Success);
+}
+
+// what to do when the test fails
+pub fn test_panic_handler(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    exit_qemu(QemuExitCode::Failed);
+    loop {}
+}
+
+// EXIT QEMU FUNCS ======================================
+
+// define an enum to represent our possible exit status', see exit_qemu() for more info
+// we also represent the enum variants as u32 because we defined the "port size" as 4 bytes so u32 would equal the max value
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
+pub fn exit_qemu(exit_code: QemuExitCode) {
+    // enable use of special port I/O cpu instructions via rust abstractions
+    use x86_64::instructions::port::Port;
+
+    // passing a value into the isa-debug-exit QEMU port exits with an exit status of: "(value << 1) | 1"
+    // the success and failed exit status codes don't matter as long we don't interefere with QEMU's default exit codes which mean special things
+    // ex. we can't choose success to exit with 0 because that would mean "(0 << 1) | 1 = 1", and exit status 1 means there was an error in running QEMU
+    unsafe {
+        let mut port = Port::new(0xf4);
+        port.write(exit_code as u32);
+    }
+}
+
+// lib.rs TESTS ================================================
+
+#[test_case]
+fn trivial_lib_assertion() {
+    assert_eq!(1, 1);
+}
+
+// ENTRY FUNCTIONS (for `cargo test` in lib.rs) =======================
+
+/// Entry point for `cargo test`
+/// lib.rs is tested independently of main.rs so we need a entry point AND panic handler here too (only in test mode)
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    test_main();
+    loop {}
+}
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    test_panic_handler(info)
+}
