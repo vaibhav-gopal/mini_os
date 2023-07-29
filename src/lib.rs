@@ -3,11 +3,21 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![feature(abi_x86_interrupt)] // see interrupts.rs
 
 pub mod serial;
 pub mod vga_buffer;
+pub mod interrupts;
+pub mod gdt;
 
 use core::panic::PanicInfo;
+
+// lib.rs TESTS ================================================
+
+#[test_case]
+fn trivial_lib_assertion() {
+    assert_eq!(1, 1);
+}
 
 // CONFIG TEST FUNCS (for main.rs, lib.rs and all integration tests)===============================
 pub trait Testable {
@@ -71,11 +81,10 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
     }
 }
 
-// lib.rs TESTS ================================================
+// INIT FUNCTIONS ====================================================
 
-#[test_case]
-fn trivial_lib_assertion() {
-    assert_eq!(1, 1);
+pub fn init() {
+    interrupts::init_idt();
 }
 
 // ENTRY FUNCTIONS (for `cargo test` in lib.rs) =======================
@@ -85,7 +94,8 @@ fn trivial_lib_assertion() {
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    test_main();
+    init();
+    test_main(); //test harness --> see crate attributes and test runner
     loop {}
 }
 #[cfg(test)]

@@ -3,6 +3,10 @@ name = "mini_os"
 version = "0.1.0"
 edition = "2021"
 
+[[test]]
+name = "should_panic"
+harness = false
+
 
 [dependencies]
 

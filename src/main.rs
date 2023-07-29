@@ -48,12 +48,24 @@ fn trivial_main_assertion() {
 // named `_start` by default, (LLVM and LLD/Rust-LLD standards)
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    println!("Hello World!!!!");
-    print!("Hello yet again :(");
-    println!(" --> Some numbers: {} {}", 42, 1.337);
+    println!("Hello World!!!");
+
+    mini_os::init();
+
+    // // invoke a breakpoint exception
+    // x86_64::instructions::interrupts::int3(); // new
+
+    // // trigger a page fault
+    // unsafe {
+    //     *(0xdeadbeef as *mut u8) = 42;
+    // };
 
     #[cfg(test)]
     test_main();
+
+    print!("Hello yet again :( --> ");
+    println!("It did not crash!");
+    println!("Some numbers: {} {}", 42, 1.337);
 
     loop {}
 }

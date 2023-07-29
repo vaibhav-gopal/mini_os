@@ -8,7 +8,7 @@
 use core::panic::PanicInfo;
 use mini_os::println;
 
-// MAIN TEST
+// MAIN TEST ==============================================
 
 ///Ensure println works right after booting
 #[test_case]
@@ -16,7 +16,7 @@ fn test_println() {
     println!("test_println output");
 }
 
-// END
+// END ====================================================
 
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {

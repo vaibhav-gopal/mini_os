@@ -196,6 +196,7 @@ pub fn _print(args: fmt::Arguments) {
 }
 
 // TESTS =====================================
+// have to keep tests after the print macro declaration
 
 #[test_case]
 fn test_println_simple() {
