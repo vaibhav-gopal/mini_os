@@ -84,6 +84,7 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 // INIT FUNCTIONS ====================================================
 
 pub fn init() {
+    gdt::init();
     interrupts::init_idt();
 }
 
