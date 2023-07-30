@@ -16,8 +16,10 @@ harness = false
 
 # Use a premade bootloader (implemented in rust and assembly NOT C code) instead of implementing it outselves
 # bootloaders are responsible for initializing the CPU and loading our custom Kernel
+# also we map the entire physical memory to some part of the virtual memory address space --> done so the kernel can access physical memory addresses
+# this is done b/c the kernel is built on top of a virtual memory address space built by the bootloader, so to access physical memory we need another abstraction
 # versions 0.11.x of the bootloader crate is broken and 0.10.x requires additional research to work
-bootloader = "0.9.22"
+bootloader = { version = "0.9.23", features = ["map_physical_memory"]} 
 # Use the volatile library which ensures that read or (only or) writes are not optimized by the compiler
 # newer versions are not compatible
 volatile = "0.2.6"
@@ -29,6 +31,11 @@ x86_64 = "0.14.2"
 # communicate from QEMU to host system via serial ports and UART on the QEMU system
 # the 16550 UART Integrated Circuit was compatible with most x86 systems --> crate provides UART initialization and types
 uart_16550 = "0.2.19"
+# for hardware interrupt processing we will be emulating the Intel 8259 PIC (programmable interrupt controller) chip via QEMU automatically (its "part" of x86)
+# we can use the newer APIC type chips but PIC is easier to set up --> use later on
+pic8259 = "0.10.1"
+# crate to help translate scanscode sets for the keyboard
+pc-keyboard = "0.7.0"
 
 [dependencies.lazy_static]
 version = "1.0"

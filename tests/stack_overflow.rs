@@ -32,7 +32,7 @@ fn panic(info: &PanicInfo) -> ! {
 #[allow(unconditional_recursion)] // silence compiler warning about endless recursion
 fn stack_overflow() {
     stack_overflow(); // for each recursion, the return address is pushed
-    volatile::Volatile::new(0).read(); // prevent tail recursion optimizations
+    volatile::Volatile::new(0).read(); // prevent tail recursion optimizations (compressing into single loop, not creating stack frames)
 }
 
 // Custom IDT initialization ==============================

@@ -30,6 +30,12 @@
 
 use mini_os::{print, println};
 
+use bootloader::{BootInfo, entry_point};
+
+// here we chain the _start func to a regular rust function (i.e. _start() is still explicitly called under the hood with no mangle, extern "C", etc...)
+// this is to apply signature/type checking
+entry_point!(kernel_main); 
+
 // No std library --> Implement panic handling ourselves
 use core::panic::PanicInfo;
 
@@ -46,20 +52,28 @@ fn trivial_main_assertion() {
 // Use extern "C" to use the C calling convention instead of the unspecified rust calling convention which uses system defaults
 // this function is the entry point, since the linker looks for a function
 // named `_start` by default, (LLVM and LLD/Rust-LLD standards)
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    println!("Hello World!!!");
+// THIS EXPLICIT ENTRY POINT IS NO LONGER REQUIRED --> See kernel_main() and entry_point! macro
+// #[no_mangle]
+// pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
+//     println!("Hello World!!!");
+//     mini_os::init();
+//     #[cfg(test)]
+//     test_main();
+//     print!("Hello yet again :( --> ");
+//     println!("It did not crash!");
+//     println!("Some numbers: {} {}", 42, 1.337);
+//     mini_os::hlt_loop();
+// }
 
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    println!("Hello World!!!!");
     mini_os::init();
-
     #[cfg(test)]
     test_main();
-
-    print!("Hello yet again :( --> ");
+    print!("Heelo yet again :< --> ")    ;
     println!("It did not crash!");
     println!("Some numbers: {} {}", 42, 1.337);
-
-    loop {}
+    mini_os::hlt_loop();
 }
 
 // Called on panic (not in test mode) --> loop infinitely for now --> diverging function returns "never" type
@@ -68,7 +82,7 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    mini_os::hlt_loop();
 }
 // the panic handler when run `cargo test` --> print via serial to host system and exit qemu
 #[cfg(test)]

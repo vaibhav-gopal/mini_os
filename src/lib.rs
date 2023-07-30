@@ -9,8 +9,16 @@ pub mod serial;
 pub mod vga_buffer;
 pub mod interrupts;
 pub mod gdt;
+pub mod memory;
 
 use core::panic::PanicInfo;
+
+// use the `hlt` instruction to create an energy-efficient endless loop rather than burning CPU resources
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
+}
 
 // lib.rs TESTS ================================================
 
@@ -20,6 +28,7 @@ fn trivial_lib_assertion() {
 }
 
 // CONFIG TEST FUNCS (for main.rs, lib.rs and all integration tests)===============================
+
 pub trait Testable {
     fn run(&self) -> ();
 }
@@ -54,7 +63,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    hlt_loop();
 }
 
 // EXIT QEMU FUNCS ======================================
@@ -84,8 +93,10 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 // INIT FUNCTIONS ====================================================
 
 pub fn init() {
-    gdt::init();
-    interrupts::init_idt();
+    gdt::init(); // initialize the Global Descriptor Table (GDT) and Task State Segment (TSS) needed by the IDT
+    interrupts::init_idt(); // Set up the interrupt table (IDT: Interrupt Descriptor Table) to handle interrupts and handler functions
+    unsafe { interrupts::PICS.lock().initialize() }; // Initialize both PIC's (primary and secondary) with our offsets
+    x86_64::instructions::interrupts::enable(); // enable interrupts on our CPU
 }
 
 // ENTRY FUNCTIONS (for `cargo test` in lib.rs) =======================
@@ -97,7 +108,7 @@ pub fn init() {
 pub extern "C" fn _start() -> ! {
     init();
     test_main(); //test harness --> see crate attributes and test runner
-    loop {}
+    hlt_loop();
 }
 #[cfg(test)]
 #[panic_handler]
