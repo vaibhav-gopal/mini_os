@@ -4,7 +4,7 @@
 # Which are typically included by the C library on the host OS, but we need to either implement it outselves or use existing features (which we are doing here)
 
 [unstable]
-build-std = ["core", "compiler_builtins"]
+build-std = ["core", "compiler_builtins", "alloc"]
 build-std-features = ["compiler-builtins-mem"]
 
 # Custom target --> for no host OS

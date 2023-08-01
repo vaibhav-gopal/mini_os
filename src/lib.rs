@@ -10,6 +10,10 @@ pub mod vga_buffer;
 pub mod interrupts;
 pub mod gdt;
 pub mod memory;
+pub mod allocator;
+
+// use built-in alloc crate --> subset of the standard library --> building for custom target (have to recompile --> see .cargo/config.toml)
+extern crate alloc;
 
 use core::panic::PanicInfo;
 
@@ -101,15 +105,22 @@ pub fn init() {
 
 // ENTRY FUNCTIONS (for `cargo test` in lib.rs) =======================
 
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
+
+#[cfg(test)]
+entry_point!(test_kernel_main); // no longer need to explicitly delcare _start entry point --> see main.rs
+
 /// Entry point for `cargo test`
 /// lib.rs is tested independently of main.rs so we need a entry point AND panic handler here too (only in test mode)
 #[cfg(test)]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
+    // like before
     init();
-    test_main(); //test harness --> see crate attributes and test runner
+    test_main(); //test harness entry func --> see crate/lib attributes (top of file) and test runner
     hlt_loop();
 }
+
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {

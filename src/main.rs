@@ -30,6 +30,15 @@
 
 use mini_os::{print, println};
 
+// Heap allocation --> see allocator.rs
+extern crate alloc;
+use alloc::{
+    boxed::Box,
+    vec,
+    vec::Vec,
+    rc::Rc,
+};
+
 use bootloader::{BootInfo, entry_point};
 
 // here we chain the _start func to a regular rust function (i.e. _start() is still explicitly called under the hood with no mangle, extern "C", etc...)
@@ -70,6 +79,52 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     mini_os::init();
     #[cfg(test)]
     test_main();
+
+    {
+        // ALLOCATOR/PAGING SETUP ==========================
+        use mini_os::memory::{ BootInfoFrameAllocator, self };
+        use mini_os::allocator;
+        use x86_64::{structures::paging::Page, VirtAddr};
+
+        let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+        let mut mapper = unsafe { memory::init(phys_mem_offset) };
+        let mut frame_allocator = unsafe {
+            BootInfoFrameAllocator::init(&boot_info.memory_map)
+        };
+    
+        // TEST PAGING ALLOCATION AND WRITE CODE ======================
+        // map an unused page
+        let page = Page::containing_address(VirtAddr::new(0));
+        memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
+    
+        // write the string `New!` to the screen through the new mapping
+        let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+        unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e)};
+
+        // HEAP ALLOCATION =======================================
+        // initialize the heap
+        allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+
+        // test --> allocate a number on the heap 
+        let heap_value = Box::new(41);
+        println!("heap_value at {:p}", heap_value);
+
+        // test --> create a dynamically sized vector
+        let mut vec = Vec::new();
+        for i in 0..500 {
+            vec.push(i);
+        }
+        println!("vec at {:p}", vec.as_slice());
+
+        // test --> create a reference counted vector -> will be freed when count reaches 0
+        let reference_counted = Rc::new(vec![1, 2, 3]);
+        let cloned_reference = reference_counted.clone();
+        println!("current reference count is {}", Rc::strong_count(&cloned_reference));
+        core::mem::drop(reference_counted);
+        println!("reference count is {} now", Rc::strong_count(&cloned_reference));
+    }
+    
+
     print!("Heelo yet again :< --> ")    ;
     println!("It did not crash!");
     println!("Some numbers: {} {}", 42, 1.337);
