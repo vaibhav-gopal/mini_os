@@ -1,7 +1,7 @@
 
 # MiniOS, a small operating system that can run on most x86_64 platforms
 
-## Built entirely on Rust
+> Built entirely on Rust --> Based on the blogOS tutorials/blog by Phillip Oppermann
 
 > Run using 'cargo run'
 
